@@ -1,26 +1,30 @@
 --[[
-    PHUTGPT 2.0 - GOLD EDITION
-    Script by: Gemini (Requested by User)
-    Features: AI Chat, Infinite Yield Integration, Gold UI, Draggable, Minimize/Close Logic
+    PHUTGPT 2.0 - GOLD EDITION V2
+    Updated by: Gemini
+    Features: 
+    - 3 Tabs: AI Chat, Infinite Yield, Script Executor
+    - Dark Gold Inputs
+    - Send Button (Cursor Icon)
+    - Full IY Command Integration logic
 ]]
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
 
 local Player = Players.LocalPlayer
 
--- Load Infinite Yield ngầm (để các lệnh hoạt động)
+-- Load Infinite Yield ngầm (Để kích hoạt hệ thống lệnh)
 task.spawn(function()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    pcall(function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end)
 end)
 
 -- Tạo GUI chính
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhutGPT_GUI"
--- Bảo vệ GUI khỏi bị reset khi chết (nếu Executor hỗ trợ)
+ScreenGui.Name = "PhutGPT_GUI_V2"
 if syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
@@ -30,14 +34,16 @@ else
     ScreenGui.Parent = CoreGui
 end
 
--- == CẤU HÌNH MÀU SẮC (GOLD THEME) ==
+-- == MÀU SẮC ==
 local GoldGradient = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 0)),   -- Vàng chanh
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 248, 220)), -- Vàng nhạt (bóng)
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(218, 165, 32))   -- Vàng đồng
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 248, 220)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(218, 165, 32))
 }
+local DarkGold = Color3.fromRGB(184, 134, 11) -- Vàng đậm cho TextBox
+local TextColor = Color3.fromRGB(255, 255, 255) -- Chữ trắng
 
--- == HÀM HỖ TRỢ KÉO THẢ (DRAGGABLE) ==
+-- == DRAGGABLE FUNCTION ==
 local function MakeDraggable(frame, handle)
     handle = handle or frame
     local dragging, dragInput, dragStart, startPos
@@ -52,33 +58,26 @@ local function MakeDraggable(frame, handle)
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
-            
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
         end
     end)
-
     handle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
+        if input == dragInput and dragging then update(input) end
     end)
 end
 
 -- == UI CHÍNH ==
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 500, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 550, 0, 400) -- To hơn một chút để chứa 3 tab
+MainFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -87,7 +86,6 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 15)
 MainCorner.Parent = MainFrame
 
--- Hiệu ứng mạ vàng
 local MainGradient = Instance.new("UIGradient")
 MainGradient.Color = GoldGradient
 MainGradient.Rotation = 45
@@ -105,16 +103,16 @@ TitleLabel.Size = UDim2.new(0.6, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0.05, 0, 0, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextSize = 20
-TitleLabel.TextColor3 = Color3.new(0.2, 0.2, 0.2) -- Màu chữ tối để nổi trên vàng
+TitleLabel.TextSize = 22
+TitleLabel.TextColor3 = Color3.new(0.2, 0.2, 0.2)
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TitleBar
 
--- Nút Thu nhỏ (-)
+-- Nút Thu nhỏ (-) và Đóng (X)
 local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "-"
 MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -70, 0, 5)
+MinBtn.Position = UDim2.new(1, -75, 0, 5)
 MinBtn.BackgroundColor3 = Color3.new(1,1,1)
 MinBtn.BackgroundTransparency = 0.5
 MinBtn.Font = Enum.Font.GothamBold
@@ -122,11 +120,10 @@ MinBtn.TextSize = 20
 MinBtn.Parent = TitleBar
 Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 8)
 
--- Nút Đóng (X)
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "X"
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Position = UDim2.new(1, -40, 0, 5)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.TextColor3 = Color3.new(1,1,1)
 CloseBtn.Font = Enum.Font.GothamBold
@@ -136,39 +133,41 @@ Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 
 MakeDraggable(MainFrame, TitleBar)
 
--- == MENU TAB (Chat / Execute) ==
+-- == MENU TABS (3 Dòng) ==
 local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(0.9, 0, 0, 35)
-TabContainer.Position = UDim2.new(0.05, 0, 0.12, 0)
+TabContainer.Size = UDim2.new(0.94, 0, 0, 40)
+TabContainer.Position = UDim2.new(0.03, 0, 0.12, 0)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local ChatTabBtn = Instance.new("TextButton")
-ChatTabBtn.Text = "Nói chuyện AI"
-ChatTabBtn.Size = UDim2.new(0.48, 0, 1, 0)
-ChatTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100)
-ChatTabBtn.Font = Enum.Font.GothamBold
-ChatTabBtn.Parent = TabContainer
-Instance.new("UICorner", ChatTabBtn).CornerRadius = UDim.new(0, 8)
+local function CreateTabBtn(text, posScale)
+    local btn = Instance.new("TextButton")
+    btn.Text = text
+    btn.Size = UDim2.new(0.32, 0, 1, 0) -- Chia 3 phần
+    btn.Position = UDim2.new(posScale, 0, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Parent = TabContainer
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    return btn
+end
 
-local ExecTabBtn = Instance.new("TextButton")
-ExecTabBtn.Text = "Execute Script (IY)"
-ExecTabBtn.Size = UDim2.new(0.48, 0, 1, 0)
-ExecTabBtn.Position = UDim2.new(0.52, 0, 0, 0)
-ExecTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-ExecTabBtn.Font = Enum.Font.GothamBold
-ExecTabBtn.Parent = TabContainer
-Instance.new("UICorner", ExecTabBtn).CornerRadius = UDim.new(0, 8)
+local ChatTabBtn = CreateTabBtn("Nói chuyện AI", 0)
+local IYTabBtn = CreateTabBtn("Infinite Yield", 0.34)
+local ExecTabBtn = CreateTabBtn("Execute Other", 0.68)
 
--- == TRANG CHAT (AI) ==
+ChatTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100) -- Active mặc định
+
+-- == PAGE 1: CHAT AI ==
 local ChatPage = Instance.new("Frame")
-ChatPage.Size = UDim2.new(0.9, 0, 0.7, 0)
-ChatPage.Position = UDim2.new(0.05, 0, 0.25, 0)
+ChatPage.Size = UDim2.new(0.94, 0, 0.7, 0)
+ChatPage.Position = UDim2.new(0.03, 0, 0.25, 0)
 ChatPage.BackgroundTransparency = 1
 ChatPage.Parent = MainFrame
 
 local ChatScroll = Instance.new("ScrollingFrame")
-ChatScroll.Size = UDim2.new(1, 0, 0.8, 0)
+ChatScroll.Size = UDim2.new(1, 0, 0.82, 0)
 ChatScroll.BackgroundTransparency = 0.8
 ChatScroll.BackgroundColor3 = Color3.new(0,0,0)
 ChatScroll.ScrollBarThickness = 4
@@ -180,42 +179,56 @@ ChatLayout.Parent = ChatScroll
 ChatLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ChatLayout.Padding = UDim.new(0, 5)
 
+-- Thanh Chat Vàng Đậm
 local ChatInput = Instance.new("TextBox")
-ChatInput.PlaceholderText = "Nhập tin nhắn cho PhutGPT..."
-ChatInput.Size = UDim2.new(1, 0, 0.15, 0)
+ChatInput.PlaceholderText = "Nhập tin nhắn..."
+ChatInput.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+ChatInput.Size = UDim2.new(0.82, 0, 0.15, 0)
 ChatInput.Position = UDim2.new(0, 0, 0.85, 0)
-ChatInput.BackgroundColor3 = Color3.fromRGB(255, 250, 240)
-ChatInput.TextColor3 = Color3.new(0,0,0)
+ChatInput.BackgroundColor3 = DarkGold
+ChatInput.TextColor3 = TextColor
 ChatInput.Font = Enum.Font.Gotham
 ChatInput.TextSize = 14
 ChatInput.Parent = ChatPage
 Instance.new("UICorner", ChatInput).CornerRadius = UDim.new(0, 8)
 
--- == TRANG EXECUTE (Infinite Yield) ==
-local ExecPage = Instance.new("Frame")
-ExecPage.Size = UDim2.new(0.9, 0, 0.7, 0)
-ExecPage.Position = UDim2.new(0.05, 0, 0.25, 0)
-ExecPage.BackgroundTransparency = 1
-ExecPage.Visible = false
-ExecPage.Parent = MainFrame
+-- Nút Gửi (Hình con trỏ)
+local SendBtn = Instance.new("ImageButton")
+SendBtn.Name = "SendButton"
+SendBtn.Image = "rbxassetid://7309968436" -- Icon cursor/send
+SendBtn.BackgroundColor3 = DarkGold
+SendBtn.Size = UDim2.new(0.15, 0, 0.15, 0)
+SendBtn.Position = UDim2.new(0.85, 0, 0.85, 0)
+SendBtn.Parent = ChatPage
+Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 8)
 
+-- == PAGE 2: INFINITE YIELD (Đầy đủ chức năng) ==
+local IYPage = Instance.new("Frame")
+IYPage.Size = UDim2.new(0.94, 0, 0.7, 0)
+IYPage.Position = UDim2.new(0.03, 0, 0.25, 0)
+IYPage.BackgroundTransparency = 1
+IYPage.Visible = false
+IYPage.Parent = MainFrame
+
+-- Thanh tìm kiếm Vàng Đậm
 local IYSearch = Instance.new("TextBox")
-IYSearch.PlaceholderText = "Tìm lệnh IY (ví dụ: fly, noclip)..."
+IYSearch.PlaceholderText = "Nhập lệnh IY (vd: fly, bang, goto...)"
+IYSearch.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
 IYSearch.Size = UDim2.new(1, 0, 0.15, 0)
-IYSearch.BackgroundColor3 = Color3.fromRGB(255, 250, 240)
-IYSearch.TextColor3 = Color3.new(0,0,0)
+IYSearch.BackgroundColor3 = DarkGold
+IYSearch.TextColor3 = TextColor
 IYSearch.Font = Enum.Font.Gotham
 IYSearch.TextSize = 14
-IYSearch.Parent = ExecPage
+IYSearch.Parent = IYPage
 Instance.new("UICorner", IYSearch).CornerRadius = UDim.new(0, 8)
 
 local CmdScroll = Instance.new("ScrollingFrame")
-CmdScroll.Size = UDim2.new(1, 0, 0.8, 0)
-CmdScroll.Position = UDim2.new(0, 0, 0.2, 0)
+CmdScroll.Size = UDim2.new(1, 0, 0.82, 0)
+CmdScroll.Position = UDim2.new(0, 0, 0.18, 0)
 CmdScroll.BackgroundTransparency = 0.8
 CmdScroll.BackgroundColor3 = Color3.new(0,0,0)
 CmdScroll.ScrollBarThickness = 4
-CmdScroll.Parent = ExecPage
+CmdScroll.Parent = IYPage
 Instance.new("UICorner", CmdScroll).CornerRadius = UDim.new(0, 8)
 
 local CmdLayout = Instance.new("UIListLayout")
@@ -223,29 +236,38 @@ CmdLayout.Parent = CmdScroll
 CmdLayout.SortOrder = Enum.SortOrder.LayoutOrder
 CmdLayout.Padding = UDim.new(0, 2)
 
--- Danh sách lệnh phổ biến của Infinite Yield để hiển thị mẫu
-local commonCmds = {
-    "fly", "noclip", "infjump", "spectate", "btools", "god", 
-    "tpwalk", "esp", "aimbot", "clicktp", "ctrlclicktp", "spin",
-    "unfly", "clip", "respawn", "rejoin", "serverhop"
+-- Danh sách lệnh mở rộng (Infinite Yield Full Potential)
+-- Lưu ý: Thực tế IY có hàng trăm lệnh, đây là list các lệnh quan trọng nhất. 
+-- Thanh tìm kiếm ở trên đóng vai trò là Command Line để chạy BẤT KỲ lệnh nào của IY.
+local allIYCmds = {
+    "fly", "unfly", "noclip", "clip", "infjump", "spectate", "view", "unview",
+    "btools", "f3x", "god", "ungod", "invisible", "visible", "tpwalk",
+    "esp", "boxesp", "tracers", "nametags", "aimbot", "fullbright",
+    "clicktp", "ctrlclicktp", "to [plr]", "goto [plr]", "bring [plr]",
+    "freeze", "thaw", "kill [plr]", "loopkill [plr]", "fling [plr]",
+    "spin", "unspin", "float", "platform", "swim",
+    "rejoin", "serverhop", "serverinfo", "jobid",
+    "dex", "remotespy", "rconsole", "explorer",
+    "sit", "jump", "loopjump", "speed [num]", "jumppower [num]",
+    "hipheight [num]", "fov [num]", "fixcam", "reset",
+    "chat [msg]", "spam [msg]", "pm [plr] [msg]",
+    "bang", "dance", "twerk", "whack", "insane",
+    "antikick", "antiban", "antiafk", "headless"
 }
 
--- Hàm thực thi lệnh IY
 local function ExecuteIYCommand(cmd)
-    -- Gửi lệnh vào chat (Infinite Yield lắng nghe chat)
-    -- Nếu có prefix tùy chỉnh, người dùng cần nhập đúng, mặc định là ';'
-    -- Ở đây ta giả lập gửi chat để kích hoạt
+    -- Gửi lệnh vào hệ thống chat để IY bắt lệnh
     game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"):FireServer(";"..cmd, "All")
     
-    -- Hiệu ứng thông báo giả
+    -- Thông báo nhỏ
     local notif = Instance.new("TextLabel")
-    notif.Text = "Đã kích hoạt: " .. cmd
-    notif.Size = UDim2.new(1,0,0,20)
+    notif.Text = "> Đã gửi lệnh: " .. cmd
+    notif.Size = UDim2.new(1,0,0,25)
     notif.BackgroundTransparency = 1
     notif.TextColor3 = Color3.fromRGB(0, 255, 0)
-    notif.Font = Enum.Font.GothamBold
+    notif.Font = Enum.Font.Gotham
     notif.Parent = CmdScroll
-    game.Debris:AddItem(notif, 2)
+    game.Debris:AddItem(notif, 1.5)
 end
 
 local function PopulateCmdList(filter)
@@ -253,7 +275,7 @@ local function PopulateCmdList(filter)
         if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
     end
     
-    for _, cmd in ipairs(commonCmds) do
+    for _, cmd in ipairs(allIYCmds) do
         if filter == "" or string.find(cmd, filter) then
             local btn = Instance.new("TextButton")
             btn.Text = cmd
@@ -261,7 +283,10 @@ local function PopulateCmdList(filter)
             btn.BackgroundColor3 = Color3.fromRGB(255, 220, 150)
             btn.Font = Enum.Font.Gotham
             btn.TextColor3 = Color3.new(0,0,0)
+            btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.Parent = CmdScroll
+            -- Padding cho chữ
+            local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0,10); p.Parent = btn
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
             
             btn.MouseButton1Click:Connect(function()
@@ -272,23 +297,98 @@ local function PopulateCmdList(filter)
 end
 PopulateCmdList("")
 
-IYSearch.Changed:Connect(function(prop)
-    if prop == "Text" then
-        PopulateCmdList(string.lower(IYSearch.Text))
-    end
-end)
-
+-- Xử lý tìm kiếm/nhập lệnh trực tiếp
 IYSearch.FocusLost:Connect(function(enter)
     if enter and IYSearch.Text ~= "" then
         ExecuteIYCommand(IYSearch.Text)
+        IYSearch.Text = ""
+    end
+end)
+IYSearch.Changed:Connect(function(prop)
+    if prop == "Text" then PopulateCmdList(string.lower(IYSearch.Text)) end
+end)
+
+-- == PAGE 3: EXECUTE OTHER SCRIPT (Dòng thứ 3) ==
+local ExecPage = Instance.new("Frame")
+ExecPage.Size = UDim2.new(0.94, 0, 0.7, 0)
+ExecPage.Position = UDim2.new(0.03, 0, 0.25, 0)
+ExecPage.BackgroundTransparency = 1
+ExecPage.Visible = false
+ExecPage.Parent = MainFrame
+
+-- Hộp nhập Script (MultiLine)
+local ScriptBox = Instance.new("TextBox")
+ScriptBox.PlaceholderText = "-- Dán Script hoặc Loadstring vào đây..."
+ScriptBox.PlaceholderColor3 = Color3.fromRGB(200, 200, 200)
+ScriptBox.Size = UDim2.new(1, 0, 0.75, 0)
+ScriptBox.BackgroundColor3 = DarkGold
+ScriptBox.TextColor3 = TextColor
+ScriptBox.Font = Enum.Font.Code
+ScriptBox.TextSize = 14
+ScriptBox.TextXAlignment = Enum.TextXAlignment.Left
+ScriptBox.TextYAlignment = Enum.TextYAlignment.Top
+ScriptBox.ClearTextOnFocus = false
+ScriptBox.MultiLine = true
+ScriptBox.TextWrapped = true
+ScriptBox.Parent = ExecPage
+Instance.new("UICorner", ScriptBox).CornerRadius = UDim.new(0, 8)
+local pad = Instance.new("UIPadding"); pad.PaddingLeft=UDim.new(0,5); pad.PaddingTop=UDim.new(0,5); pad.Parent=ScriptBox
+
+-- Nút Execute Script
+local RunScriptBtn = Instance.new("TextButton")
+RunScriptBtn.Text = "KÍCH HOẠT SCRIPT"
+RunScriptBtn.Size = UDim2.new(1, 0, 0.2, 0)
+RunScriptBtn.Position = UDim2.new(0, 0, 0.8, 0)
+RunScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- Màu xanh lá để nổi bật nút chạy
+RunScriptBtn.Font = Enum.Font.GothamBlack
+RunScriptBtn.TextColor3 = Color3.new(1,1,1)
+RunScriptBtn.TextSize = 16
+RunScriptBtn.Parent = ExecPage
+Instance.new("UICorner", RunScriptBtn).CornerRadius = UDim.new(0, 8)
+
+RunScriptBtn.MouseButton1Click:Connect(function()
+    if ScriptBox.Text ~= "" then
+        local success, err = pcall(function()
+            loadstring(ScriptBox.Text)()
+        end)
+        if success then
+            RunScriptBtn.Text = "ĐÃ KÍCH HOẠT THÀNH CÔNG!"
+            wait(1)
+            RunScriptBtn.Text = "KÍCH HOẠT SCRIPT"
+        else
+            RunScriptBtn.Text = "LỖI: " .. tostring(err)
+            wait(2)
+            RunScriptBtn.Text = "KÍCH HOẠT SCRIPT"
+        end
     end
 end)
 
--- == AI LOGIC (PhutGPT) ==
+-- == XỬ LÝ CHUYỂN TAB ==
+local function SwitchTab(tabName)
+    ChatPage.Visible = (tabName == "Chat")
+    IYPage.Visible = (tabName == "IY")
+    ExecPage.Visible = (tabName == "Exec")
+    
+    -- Reset màu nút
+    ChatTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+    IYTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+    ExecTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+    
+    -- Set màu active
+    if tabName == "Chat" then ChatTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100) end
+    if tabName == "IY" then IYTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100) end
+    if tabName == "Exec" then ExecTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100) end
+end
+
+ChatTabBtn.MouseButton1Click:Connect(function() SwitchTab("Chat") end)
+IYTabBtn.MouseButton1Click:Connect(function() SwitchTab("IY") end)
+ExecTabBtn.MouseButton1Click:Connect(function() SwitchTab("Exec") end)
+
+-- == CHỨC NĂNG AI CHAT ==
 local function AddChat(sender, msg, color)
     local lbl = Instance.new("TextLabel")
     lbl.Text = sender .. ": " .. msg
-    lbl.Size = UDim2.new(1, -10, 0, 0) -- Chiều cao tự động sau
+    lbl.Size = UDim2.new(1, -10, 0, 0)
     lbl.AutomaticSize = Enum.AutomaticSize.Y
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = color
@@ -297,95 +397,53 @@ local function AddChat(sender, msg, color)
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = ChatScroll
+    ChatScroll.CanvasPosition = Vector2.new(0, 9999) -- Tự cuộn xuống dưới
 end
 
 local function ProcessAI(msg)
     local lowerMsg = string.lower(msg)
     local response = "Xin lỗi, PhutGPT 2.0 chưa hiểu ý bạn."
     
-    if string.find(lowerMsg, "chào") or string.find(lowerMsg, "hello") then
-        response = "Chào bạn! Tôi là PhutGPT 2.0, giao diện mạ vàng đẳng cấp. Bạn cần giúp gì?"
-    elseif string.find(lowerMsg, "buồn") then
-        response = "Đừng buồn nữa! Bật chế độ Fly lên và ngắm nhìn thế giới đi!"
-    elseif string.find(lowerMsg, "hack") or string.find(lowerMsg, "exploit") then
-        response = "Tôi đã tích hợp sẵn Infinite Yield ở tab bên cạnh. Hãy qua đó và quẩy nát server nào!"
-    elseif string.find(lowerMsg, "cười") or string.find(lowerMsg, "vui") then
-        response = "Tại sao máy tính lại nóng? Vì nó đang chạy script PhutGPT quá cháy đấy! Haha."
-    elseif string.find(lowerMsg, "tên") then
-        response = "Tôi là PhutGPT 2.0, trí tuệ nhân tạo xịn xò nhất Roblox (tự phong)."
-    elseif string.find(lowerMsg, "ngu") then
-        response = "Ăn nói cẩn thận nhé, không tôi crash game bạn bây giờ!"
+    if string.find(lowerMsg, "chào") then response = "Chào bạn! Tôi là PhutGPT 2.0. Cần hack gì không?"
+    elseif string.find(lowerMsg, "tên") then response = "PhutGPT 2.0 - Trí tuệ nhân tạo mạ vàng!"
+    elseif string.find(lowerMsg, "lệnh") then response = "Vào tab Infinite Yield để xem danh sách lệnh nhé."
+    elseif string.find(lowerMsg, "cười") then response = "Haha! Hack game vui quá đi!"
     end
-    
-    wait(0.5) -- Giả vờ suy nghĩ
+    wait(0.5)
     AddChat("PhutGPT", response, Color3.fromRGB(255, 215, 0))
 end
 
-ChatInput.FocusLost:Connect(function(enter)
-    if enter and ChatInput.Text ~= "" then
+local function SendMessage()
+    if ChatInput.Text ~= "" then
         local msg = ChatInput.Text
         AddChat("Bạn", msg, Color3.new(1,1,1))
         ChatInput.Text = ""
         ProcessAI(msg)
     end
-end)
+end
 
--- == CHUYỂN TAB ==
-ChatTabBtn.MouseButton1Click:Connect(function()
-    ChatPage.Visible = true
-    ExecPage.Visible = false
-    ChatTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100)
-    ExecTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-end)
+ChatInput.FocusLost:Connect(function(enter) if enter then SendMessage() end end)
+SendBtn.MouseButton1Click:Connect(SendMessage)
 
-ExecTabBtn.MouseButton1Click:Connect(function()
-    ChatPage.Visible = false
-    ExecPage.Visible = true
-    ChatTabBtn.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-    ExecTabBtn.BackgroundColor3 = Color3.fromRGB(255, 230, 100)
-end)
-
--- == NÚT THU NHỎ (ICON TRÒN) ==
-local MinimizedIcon = Instance.new("ImageButton") -- Dùng ImageButton hoặc TextButton tròn
+-- == ICON THU NHỎ & CONFIRM CLOSE ==
+local MinimizedIcon = Instance.new("TextButton")
 MinimizedIcon.Name = "PhutGPT_Icon"
 MinimizedIcon.Size = UDim2.new(0, 60, 0, 60)
 MinimizedIcon.Position = UDim2.new(0.1, 0, 0.1, 0)
 MinimizedIcon.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+MinimizedIcon.Text = "P"
+MinimizedIcon.Font = Enum.Font.GothamBlack
+MinimizedIcon.TextSize = 30
 MinimizedIcon.Visible = false
 MinimizedIcon.Parent = ScreenGui
-
-local IconCorner = Instance.new("UICorner")
-IconCorner.CornerRadius = UDim.new(1, 0) -- Tròn hoàn toàn
-IconCorner.Parent = MinimizedIcon
-
-local IconGradient = Instance.new("UIGradient")
-IconGradient.Color = GoldGradient
-IconGradient.Rotation = -45
-IconGradient.Parent = MinimizedIcon
-
-local IconLabel = Instance.new("TextLabel")
-IconLabel.Text = "P"
-IconLabel.Size = UDim2.new(1,0,1,0)
-IconLabel.BackgroundTransparency = 1
-IconLabel.Font = Enum.Font.GothamBlack
-IconLabel.TextSize = 30
-IconLabel.TextColor3 = Color3.new(0,0,0)
-IconLabel.Parent = MinimizedIcon
-
+Instance.new("UICorner", MinimizedIcon).CornerRadius = UDim.new(1, 0)
+local IconGrad = Instance.new("UIGradient"); IconGrad.Color = GoldGradient; IconGrad.Parent = MinimizedIcon
 MakeDraggable(MinimizedIcon)
 
--- Logic Thu nhỏ / Mở lại
-MinBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinimizedIcon.Visible = true
-end)
+MinBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; MinimizedIcon.Visible = true end)
+MinimizedIcon.MouseButton1Click:Connect(function() MainFrame.Visible = true; MinimizedIcon.Visible = false end)
 
-MinimizedIcon.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinimizedIcon.Visible = false
-end)
-
--- == BẢNG XÁC NHẬN TẮT (Confirmation) ==
+-- Bảng Confirm
 local ConfirmFrame = Instance.new("Frame")
 ConfirmFrame.Size = UDim2.new(0, 300, 0, 150)
 ConfirmFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
@@ -393,52 +451,21 @@ ConfirmFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 ConfirmFrame.Visible = false
 ConfirmFrame.Parent = ScreenGui
 Instance.new("UICorner", ConfirmFrame).CornerRadius = UDim.new(0, 10)
-ConfirmFrame.BorderSizePixel = 2
-ConfirmFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
+Instance.new("UIStroke", ConfirmFrame).Color = Color3.fromRGB(255,215,0)
+Instance.new("UIStroke", ConfirmFrame).Thickness = 2
 
 local ConfirmText = Instance.new("TextLabel")
 ConfirmText.Text = "Bạn có đồng ý tắt PhutGPT không?"
-ConfirmText.Size = UDim2.new(1, 0, 0.5, 0)
+ConfirmText.Size = UDim2.new(1,0,0.5,0)
 ConfirmText.TextColor3 = Color3.new(1,1,1)
-ConfirmText.BackgroundTransparency = 1
-ConfirmText.Font = Enum.Font.GothamBold
-ConfirmText.TextSize = 16
+ConfirmText.BackgroundTransparency = 1; ConfirmText.Font=Enum.Font.GothamBold; ConfirmText.TextSize=16
 ConfirmText.Parent = ConfirmFrame
 
-local YesBtn = Instance.new("TextButton")
-YesBtn.Text = "CÓ"
-YesBtn.Size = UDim2.new(0.4, 0, 0.3, 0)
-YesBtn.Position = UDim2.new(0.05, 0, 0.6, 0)
-YesBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-YesBtn.TextColor3 = Color3.new(1,1,1)
-YesBtn.Font = Enum.Font.GothamBold
-YesBtn.Parent = ConfirmFrame
-Instance.new("UICorner", YesBtn).CornerRadius = UDim.new(0, 8)
+local YesBtn = Instance.new("TextButton"); YesBtn.Text="CÓ"; YesBtn.Size=UDim2.new(0.4,0,0.3,0); YesBtn.Position=UDim2.new(0.05,0,0.6,0); YesBtn.BackgroundColor3=Color3.fromRGB(200,50,50); YesBtn.Parent=ConfirmFrame; Instance.new("UICorner", YesBtn).CornerRadius=UDim.new(0,8)
+local NoBtn = Instance.new("TextButton"); NoBtn.Text="KHÔNG"; NoBtn.Size=UDim2.new(0.4,0,0.3,0); NoBtn.Position=UDim2.new(0.55,0,0.6,0); NoBtn.BackgroundColor3=Color3.fromRGB(50,200,100); NoBtn.Parent=ConfirmFrame; Instance.new("UICorner", NoBtn).CornerRadius=UDim.new(0,8)
 
-local NoBtn = Instance.new("TextButton")
-NoBtn.Text = "KHÔNG"
-NoBtn.Size = UDim2.new(0.4, 0, 0.3, 0)
-NoBtn.Position = UDim2.new(0.55, 0, 0.6, 0)
-NoBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
-NoBtn.TextColor3 = Color3.new(1,1,1)
-NoBtn.Font = Enum.Font.GothamBold
-NoBtn.Parent = ConfirmFrame
-Instance.new("UICorner", NoBtn).CornerRadius = UDim.new(0, 8)
+CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible=true; MainFrame.Visible=false end)
+NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible=false; MainFrame.Visible=true end)
+YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
--- Logic Nút Tắt
-CloseBtn.MouseButton1Click:Connect(function()
-    ConfirmFrame.Visible = true
-    MainFrame.Visible = false -- Tạm ẩn main frame để hiện bảng confirm
-end)
-
-NoBtn.MouseButton1Click:Connect(function()
-    ConfirmFrame.Visible = false
-    MainFrame.Visible = true -- Hiện lại nếu chọn Không
-end)
-
-YesBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy() -- Hủy toàn bộ GUI
-end)
-
--- Gửi lời chào đầu tiên
-AddChat("PhutGPT", "Chào mừng! PhutGPT 2.0 đã được kích hoạt. Giao diện Mạ Vàng đã sẵn sàng phục vụ.", Color3.fromRGB(255, 215, 0))
+AddChat("PhutGPT", "PhutGPT 2.0 đã sẵn sàng.Thật là một script rất sigma và skibidi!", Color3.fromRGB(255, 215, 0))
